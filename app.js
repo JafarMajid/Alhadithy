@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {GLTFLoader} from './vendor/examples/jsm/loaders/GLTFLoader.js';
+import {revealEffect,triangleParticles} from './reveal.js';
 
 const $=id=>document.getElementById(id);
 const mobile=matchMedia('(max-width: 700px)').matches || navigator.connection?.saveData;
@@ -17,9 +18,13 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1.25:1.75));renderer.set
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;
 const chairRoot=new THREE.Group();scene.add(chairRoot);
-const solid=new THREE.Group(),wire=new THREE.Group();chairRoot.add(solid,wire);
+const solid=new THREE.Group(),wire=new THREE.Group(),shadowProxy=new THREE.Group();chairRoot.add(solid,wire,shadowProxy);
 const chairMat=new THREE.MeshStandardMaterial({color:0x92928c,roughness:.62,metalness:0,transparent:true});
-const wireMat=new THREE.MeshBasicMaterial({color:0x66705c,wireframe:true,transparent:true,opacity:.27,depthWrite:false});
+const wireMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,metalness:0,transparent:true,depthWrite:false});
+const proxyMat=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false});
+const chairReveal={value:0},roomReveal={value:0};
+revealEffect(chairMat,'chair',chairReveal);revealEffect(wireMat,'chair',chairReveal,true);
+const chairParticles=triangleParticles(chairRoot,mobile?65:150,0xe6ded0);
 const studio=new THREE.Group();scene.add(studio);
 const main=new THREE.PointLight(0xfff5e7,58,18,2);main.position.set(3,3.4,4);studio.add(main);
 const rim=new THREE.PointLight(0xffffff,78,16,2);rim.position.set(-3,2.2,-2.7);studio.add(rim);
@@ -44,22 +49,29 @@ addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updat
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);frame=0;}else{lastTime=0;schedule();}});
 document.querySelectorAll('[data-progress]').forEach(button=>button.addEventListener('click',()=>scrollTo({top:Number(button.dataset.progress)*(document.documentElement.scrollHeight-innerHeight),behavior:reduced?'instant':'smooth'})));
 $('stage').addEventListener('webglcontextlost',event=>{event.preventDefault();cancelAnimationFrame(frame);frame=0;$('status').textContent='Graphics paused — reload to resume';});
-new GLTFLoader().load(mobile?'./assets/chair-mobile.glb':'./assets/chair.glb',gltf=>{
-  gltf.scene.traverse(object=>{if(object.isMesh){const mesh=new THREE.Mesh(object.geometry,chairMat);object.updateWorldMatrix(true,false);mesh.applyMatrix4(object.matrixWorld);mesh.castShadow=true;mesh.receiveShadow=true;solid.add(mesh);const lines=new THREE.Mesh(object.geometry,wireMat);lines.applyMatrix4(object.matrixWorld);wire.add(lines);}});
-  $('status').textContent='Jafar Alhadithy';renderer.shadowMap.needsUpdate=true;readScroll();
+const loader=new GLTFLoader();
+let assetsReady=0;
+function assetReady(){assetsReady++;$('status').textContent=assetsReady===2?'Jafar Alhadithy':'Loading the chair…';renderer.shadowMap.needsUpdate=true;readScroll();}
+loader.load(mobile?'./assets/chair-mobile.glb':'./assets/chair.glb',gltf=>{
+ gltf.scene.traverse(object=>{if(object.isMesh){object.updateWorldMatrix(true,false);const mesh=new THREE.Mesh(object.geometry,chairMat);mesh.applyMatrix4(object.matrixWorld);mesh.receiveShadow=true;solid.add(mesh);const proxy=new THREE.Mesh(object.geometry,proxyMat);proxy.applyMatrix4(object.matrixWorld);proxy.castShadow=true;shadowProxy.add(proxy);}});assetReady();
+},undefined,fail);
+loader.load('./assets/chair-wire.glb',gltf=>{
+ gltf.scene.traverse(object=>{if(object.isMesh){object.updateWorldMatrix(true,false);const mesh=new THREE.Mesh(object.geometry,wireMat);mesh.applyMatrix4(object.matrixWorld);wire.add(mesh);}});assetReady();
 },undefined,fail);
 readScroll();
 
 // One continuous scene. Geometry and light groups are culled when their weight is zero.
 const room=new THREE.Group(),outside=new THREE.Group();scene.add(room,outside);
 const roomMaterials=[],outsideMaterials=[];
-const cube=new THREE.BoxGeometry(1,1,1);
+const cube=new THREE.BoxGeometry(1,1,1,6,6,6);
 function material(color,list){const m=new THREE.MeshStandardMaterial({color,roughness:.86,transparent:true});list.push(m);return m;}
 const plaster=material(0xd6d0c1,roomMaterials),floor=material(0xb2a18a,roomMaterials),fabric=material(0xada998,roomMaterials),dark=material(0x555b4b,roomMaterials),stone=material(0xc2bda9,roomMaterials);
 const facade=material(0xd5cdbc,outsideMaterials),earth=material(0xc5c6b3,outsideMaterials),foliage=material(0x7c876b,outsideMaterials),glazing=material(0x4b5a56,outsideMaterials);
-function box(group,mat,size,pos){const mesh=new THREE.Mesh(cube,mat);mesh.scale.set(...size);mesh.position.set(...pos);mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);return mesh;}
+const exteriorClones=new Map();
+function box(group,mat,size,pos){if(group===outside&&roomMaterials.includes(mat)){if(!exteriorClones.has(mat)){const clone=mat.clone();exteriorClones.set(mat,clone);outsideMaterials.push(clone);}mat=exteriorClones.get(mat);}const mesh=new THREE.Mesh(cube,mat);mesh.scale.set(...size);mesh.position.set(...pos);mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);return mesh;}
 box(room,floor,[8,.2,6],[0,-.1,0]);
 box(room,plaster,[8,3.6,.18],[0,1.8,-3]);
+box(room,plaster,[8,.18,6],[0,3.6,0]);
 box(room,plaster,[.18,3.6,6],[4,1.8,0]);
 // Side window lets sunlight into the room; front window is the camera's exit.
 box(room,plaster,[.18,3.6,1.2],[-4,1.8,-2.4]);
@@ -102,36 +114,37 @@ const contactTexture=new THREE.CanvasTexture(shadowCanvas);
 const contactMaterial=new THREE.MeshBasicMaterial({map:contactTexture,transparent:true,depthWrite:false,opacity:0});
 const contact=new THREE.Mesh(new THREE.PlaneGeometry(2.3,2),contactMaterial);contact.rotation.x=-Math.PI/2;contact.position.set(-.6,.035,.4);room.add(contact);
 const roomLights=new THREE.Group(),exteriorLights=new THREE.Group();scene.add(roomLights,exteriorLights);
-const sun=new THREE.DirectionalLight(0xffe3b4,3.1);sun.position.set(-7,8,2);sun.target.position.set(0,0,-.3);roomLights.add(sun,sun.target);
+const sun=new THREE.DirectionalLight(0xffcc88,4.4);sun.position.set(-7,3.3,1);sun.target.position.set(0,.5,-.3);roomLights.add(sun,sun.target);
 sun.castShadow=true;sun.shadow.mapSize.set(mobile?512:1024,mobile?512:1024);sun.shadow.camera.left=-6;sun.shadow.camera.right=6;sun.shadow.camera.top=6;sun.shadow.camera.bottom=-6;sun.shadow.camera.near=.5;sun.shadow.camera.far=25;sun.shadow.normalBias=.025;sun.shadow.bias=-.00015;
-const bounce=new THREE.PointLight(0xffe3b4,16,11,2);bounce.position.set(0,2.4,0);roomLights.add(bounce);
-const warmAmbient=new THREE.AmbientLight(0xffe8c6,.72);roomLights.add(warmAmbient);
+const coolAmbient=new THREE.AmbientLight(0x46679b,.45);roomLights.add(coolAmbient);
 const daylight=new THREE.DirectionalLight(0xffedcf,2.8);daylight.position.set(-8,12,6);exteriorLights.add(daylight);
 const skyAmbient=new THREE.AmbientLight(0xf6f3e9,1.25);exteriorLights.add(skyAmbient);
-const lightSets=[[studio,[[main,58],[rim,78],[fill,1.05],[studioShadowLight,.65]]],[roomLights,[[sun,3.1],[bounce,16],[warmAmbient,.72]]],[exteriorLights,[[daylight,2.8],[skyAmbient,1.25]]]];
+const lightSets=[[studio,[[main,58],[rim,78],[fill,1.05],[studioShadowLight,.65]]],[roomLights,[[sun,4.4],[coolAmbient,.45]]],[exteriorLights,[[daylight,2.8],[skyAmbient,1.25]]]];
+for(const m of roomMaterials)revealEffect(m,'room',roomReveal);
+room.traverse(mesh=>{if(mesh.isMesh&&mesh.castShadow){const depth=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking});revealEffect(depth,'room',roomReveal,false,true);mesh.customDepthMaterial=depth;}});
+const roomParticles=triangleParticles(scene,mobile?90:220,0xd6bc8c);
 function lightWeight(index,weight){const [group,lights]=lightSets[index];group.visible=weight>.001;for(const [light,base]of lights){light.intensity=weight>.001?base*weight:0;light.visible=weight>.001;}}
 function fadeGeometry(group,materials,weight){group.visible=weight>.001;for(const m of materials){m.opacity=weight;m.transparent=weight<.999;m.depthWrite=weight>.98;}}
 const keys=[
- [0,[2.5,5.6,6.2],[0,4.35,0]],
- [.3,[2.3,5.5,5.8],[0,4.35,0]],
- [.55,[2.1,2.05,2.35],[-.35,.8,-.3]],
- [.66,[1.25,1.95,2.6],[0,1,-.5]],
- [.76,[1.1,2.1,5.4],[0,1,0]],
- [1,[13,7.5,18],[0,-.25,0]]
+ [0,[0,1.65,2.85],[0,.7,0]],
+ [.58,[0,1.65,2.85],[0,.7,0]],
+ [.70,[0,1.65,2.85],[0,1.65,0]],
+ [.78,[0,1.65,6],[0,1.65,0]],
+ [1,[0,1.65,22],[0,1.65,0]]
 ];
-function cameraAt(p){let i=0;while(i<keys.length-2&&p>keys[i+1][0])i++;const a=keys[i],b=keys[i+1],t=smooth(a[0],b[0],p);camera.position.set(...a[1].map((v,j)=>lerp(v,b[1][j],t)));const look=new THREE.Vector3(...a[2].map((v,j)=>lerp(v,b[2][j],t)));if(innerWidth<700){const offset=camera.position.clone().sub(look);camera.position.copy(look).addScaledVector(offset,1.3);look.y+=.7*(1-smooth(.34,.55,p));}camera.lookAt(look);if(innerWidth>=700){camera.setViewOffset(innerWidth,innerHeight,-innerWidth*.20*(1-smooth(.36,.58,p)),0,innerWidth,innerHeight);}else{camera.clearViewOffset();}}
+function cameraAt(p){let i=0;while(i<keys.length-2&&p>keys[i+1][0])i++;const a=keys[i],b=keys[i+1],t=smooth(a[0],b[0],p);camera.position.set(...a[1].map((v,j)=>lerp(v,b[1][j],t)));const look=new THREE.Vector3(...a[2].map((v,j)=>lerp(v,b[2][j],t)));camera.lookAt(look);const compact=innerWidth<700;camera.fov=compact?49:38;camera.updateProjectionMatrix();camera.setViewOffset(innerWidth,innerHeight,compact?0:-innerWidth*.20*(1-smooth(.36,.58,p)),compact?-innerHeight*.17*(1-smooth(.36,.58,p)):0,innerWidth,innerHeight);}
 let lastShadow=-1,lastCaption='';
 updateScene=p=>{
- const descent=smooth(.32,.54,p),roomWeight=smooth(.32,.48,p),exteriorWeight=smooth(.68,.86,p);
- chairRoot.position.set(-.6*descent,3.8*(1-descent),.4*descent);
- const tumble=Math.sin(Math.PI*descent);
- chairRoot.rotation.set(tumble*.65,lerp(-.55,.12,smooth(0,.54,p))+tumble*1.25,-tumble*.45);
+ const roomWeight=smooth(.34,.60,p),exteriorWeight=smooth(.71,.86,p);
+ chairRoot.position.set(0,0,0);chairRoot.rotation.set(0,-.55,0);
  studio.position.copy(chairRoot.position);
- studioFloor.position.y=3.795;studioFloor.visible=p<.45;studioFloorMaterial.opacity=.42*(1-smooth(.31,.45,p));
- const reveal=smooth(.12,.29,p);chairMat.opacity=reveal;chairMat.transparent=reveal<.999;solid.visible=true;chairMat.depthWrite=reveal>.99;wireMat.opacity=(1-reveal)*.27;wire.visible=reveal<.999;
- fadeGeometry(room,roomMaterials,roomWeight);fadeGeometry(outside,outsideMaterials,exteriorWeight);
- contactMaterial.opacity=descent*roomWeight;
- lightWeight(0,1-smooth(.34,.52,p));lightWeight(1,smooth(.34,.52,p)*(1-smooth(.72,.87,p)));lightWeight(2,smooth(.72,.87,p));
+ studioFloor.position.y=.004;studioFloor.visible=p<.43;studioFloorMaterial.opacity=.42*(1-smooth(.35,.43,p));
+ const reveal=smooth(.10,.31,p);chairReveal.value=reveal;chairMat.opacity=1;chairMat.transparent=true;solid.visible=reveal>.001;chairMat.depthWrite=true;wireMat.opacity=1;wire.visible=reveal<.999;
+ chairParticles.update(reveal,'chair');roomParticles.update(roomWeight,'room');roomReveal.value=roomWeight;
+ room.visible=roomWeight>.001;for(const m of roomMaterials){m.opacity=1;m.transparent=roomWeight<.999;m.depthWrite=true;}fadeGeometry(outside,outsideMaterials,exteriorWeight);
+ contactMaterial.opacity=roomWeight;contact.position.set(0,.035,0);
+ lightWeight(0,1-smooth(.35,.56,p));lightWeight(1,smooth(.35,.56,p)*(1-smooth(.77,.9,p)));lightWeight(2,smooth(.77,.9,p));
+ const darkRoom=smooth(.4,.58,p)*(1-smooth(.73,.88,p));document.body.classList.toggle('in-room',darkRoom>.6);
  if((roomLights.visible||studio.visible)&&Math.abs(p-lastShadow)>.0001){renderer.shadowMap.needsUpdate=true;lastShadow=p;}
  cameraAt(p);
  $('identity').style.opacity=1-smooth(.06,.18,p);
@@ -144,4 +157,5 @@ updateScene=p=>{
 };
 schedule();
 }
+
 
