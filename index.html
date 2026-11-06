@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eeece5">
+  <meta name="description" content="Jafar Alhadithy — Portfolio. Coming soon.">
+  <title>Jafar Alhadithy — Coming Soon</title>
+  <style>
+    * { box-sizing: border-box; }
+    html { background: #eeece5; }
+    body { margin: 0; color: #242820; font-family: Arial, Helvetica, sans-serif; }
+    .page { min-height: 100svh; padding: clamp(24px, 5vw, 72px); display: flex; flex-direction: column; }
+    header, footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+    header { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; }
+    .monogram { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid #242820; border-radius: 50%; font-size: 14px; letter-spacing: -.04em; }
+    main { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 90px 0; }
+    .eyebrow { margin: 0 0 28px; display: flex; align-items: center; gap: 10px; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
+    .dot { width: 7px; height: 7px; background: #68734f; border-radius: 50%; }
+    h1 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(60px, 11vw, 164px); font-weight: 400; line-height: .95; letter-spacing: -.065em; }
+    h1 span { display: block; }
+    .status { margin: 36px 0 0; font-size: clamp(17px, 2vw, 23px); font-weight: 400; color: #626659; letter-spacing: -.02em; }
+    footer { padding-top: 22px; border-top: 1px solid #cbcfc1; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #626659; }
+    .spark { font-size: 25px; line-height: 1; color: #68734f; }
+    @media (max-width: 480px) { main { padding: 80px 0; } h1 { font-size: clamp(54px, 13vw, 66px); } footer { letter-spacing: .08em; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="monogram" aria-label="Jafar Alhadithy">JA</div>
+      <span>Portfolio</span>
+    </header>
+    <main>
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span>A work in progress</p>
+      <h1><span>Jafar</span><span>Alhadithy</span></h1>
+      <p class="status">Coming Soon</p>
+    </main>
+    <footer>
+      <span>Jafar Alhadithy</span>
+      <span class="spark" aria-hidden="true">✳</span>
+      <span>Stay tuned</span>
+    </footer>
+  </div>
+</body>
+</html>
