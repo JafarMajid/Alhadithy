@@ -6,12 +6,14 @@ Serve this folder over HTTP; ES modules and GLB loading will not work reliably f
 
 ## Lighting and performance
 - Studio: main and rim point lights, warm ambient fill, and a directional shadow light with a shadow-only receiver matching the flat background.
-- Interior: warm side directional sunlight through the window, one shadow map, dark blue ambient at 0.45 intensity. No interior point light. Ceiling and walls contain the warm illumination.
+- Interior: warm side directional sunlight through the window, one shadow map, blue ambient at 0.9 intensity. No interior point light. Lighting begins changing at 30% scroll and finishes at 44%.
 - Exterior: directional sunlight and ambient fill.
 - Light intensity fades by scroll position; zero-weight lights and groups become invisible and are excluded from rendering.
-- Original chair geometry provides an invisible full silhouette shadow caster (color and depth writes disabled). The exported wireframe uses white matte material. Complementary shader masks blend it into the solid chair from upper left to lower right with noise.
+- Original chair geometry provides an invisible full silhouette shadow caster (color and depth writes disabled). The extra solid mesh embedded in the wireframe export is removed from the web asset. Only the actual exported wire geometry is visible at the start, using opaque white matte material. Complementary noisy cutouts reveal the finished chair with an emissive leading edge, without translucent white surfaces.
 - Room shader reveals world-space spherical distance from the chair, perturbs the edge with noise, and displaces vertices at the boundary. Its depth shader uses the same reveal so unrevealed walls do not cast phantom shadows.
 - Triangle effects use two instanced draw calls (65/90 particles on mobile, 150/220 on desktop) and switch off outside transitions.
+- A white emissive ground ring tracks the expanding reveal radius with constant world-space line thickness. No bloom pass or additional lights.
+- Camera pitch and backward travel happen together; the exterior settles front-on against a procedural blue sky with a pale horizon.
 - No point-light shadow maps, no postprocessing, no screen-space AO. One 64×64 procedural interior contact-shadow texture. Directional shadow maps update only during scroll movement or loading.
 - Rendering stops when scroll smoothing settles and while the tab is hidden.
 - Mobile: 264 KB chair, pixel ratio capped at 1.25, 512px shadow map, no multisample antialiasing. Desktop: 732 KB chair, pixel ratio capped at 1.75, 1024px shadow map.

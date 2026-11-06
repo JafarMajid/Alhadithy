@@ -34,9 +34,13 @@ export function revealEffect(material,kind,progress,inverse=false,depth=false){
   `;
   shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>',`#include <clipping_planes_fragment>
    ${mask}
-   if(mask<.015)discard;
+   if(mask<${kind==='chair'?'.5':'.015'})discard;
   `);
-  if(!depth)shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`diffuseColor.a*=mask;\n#include <opaque_fragment>`);
+  if(!depth&&kind==='room')shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`diffuseColor.a*=mask;\n#include <opaque_fragment>`);
+  if(!depth&&kind==='chair')shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+   float glow=(1.-smoothstep(.008,.065,abs(field-threshold)))*smoothstep(0.,.025,uReveal)*(1.-smoothstep(.975,1.,uReveal));
+   totalEmissiveRadiance+=vec3(1.,.96,.85)*glow*3.5;
+  `);
  };
  material.customProgramCacheKey=()=>`${kind}-${inverse}-${depth}`;
  material.needsUpdate=true;

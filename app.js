@@ -9,6 +9,9 @@ const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
 const smooth=(a,b,v)=>{const t=clamp((v-a)/(b-a));return t*t*(3-2*t)};
 const lerp=THREE.MathUtils.lerp;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#eeece5');
+const skyFade={value:0};
+const skyMaterial=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,toneMapped:false,uniforms:{uFade:skyFade,uCream:{value:new THREE.Color('#eeece5')},uHorizon:{value:new THREE.Color('#d7e9f4')},uBlue:{value:new THREE.Color('#5298d1')}},vertexShader:`varying vec3 vDirection; void main(){vDirection=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vDirection;uniform float uFade;uniform vec3 uCream,uHorizon,uBlue;void main(){float h=pow(max(normalize(vDirection).y,0.),.55);vec3 sky=mix(uHorizon,uBlue,smoothstep(0.,.8,h));gl_FragColor=vec4(mix(uCream,sky,uFade),1.);\n#include <colorspace_fragment>\n}`});
+const skyDome=new THREE.Mesh(new THREE.SphereGeometry(90,24,12),skyMaterial);skyDome.renderOrder=-10;skyDome.visible=false;scene.add(skyDome);
 const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,.05,180);
 let renderer;
 try{renderer=new THREE.WebGLRenderer({canvas:$('stage'),antialias:!mobile,alpha:false,powerPreference:'low-power'});}catch(error){fail(error);}
@@ -19,8 +22,8 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFi
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;
 const chairRoot=new THREE.Group();scene.add(chairRoot);
 const solid=new THREE.Group(),wire=new THREE.Group(),shadowProxy=new THREE.Group();chairRoot.add(solid,wire,shadowProxy);
-const chairMat=new THREE.MeshStandardMaterial({color:0x92928c,roughness:.62,metalness:0,transparent:true});
-const wireMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,metalness:0,transparent:true,depthWrite:false});
+const chairMat=new THREE.MeshStandardMaterial({color:0x92928c,roughness:.62,metalness:0});
+const wireMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,metalness:0});
 const proxyMat=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false});
 const chairReveal={value:0},roomReveal={value:0};
 revealEffect(chairMat,'chair',chairReveal);revealEffect(wireMat,'chair',chairReveal,true);
@@ -116,19 +119,22 @@ const contact=new THREE.Mesh(new THREE.PlaneGeometry(2.3,2),contactMaterial);con
 const roomLights=new THREE.Group(),exteriorLights=new THREE.Group();scene.add(roomLights,exteriorLights);
 const sun=new THREE.DirectionalLight(0xffcc88,4.4);sun.position.set(-7,3.3,1);sun.target.position.set(0,.5,-.3);roomLights.add(sun,sun.target);
 sun.castShadow=true;sun.shadow.mapSize.set(mobile?512:1024,mobile?512:1024);sun.shadow.camera.left=-6;sun.shadow.camera.right=6;sun.shadow.camera.top=6;sun.shadow.camera.bottom=-6;sun.shadow.camera.near=.5;sun.shadow.camera.far=25;sun.shadow.normalBias=.025;sun.shadow.bias=-.00015;
-const coolAmbient=new THREE.AmbientLight(0x46679b,.45);roomLights.add(coolAmbient);
+const coolAmbient=new THREE.AmbientLight(0x698bc0,.9);roomLights.add(coolAmbient);
 const daylight=new THREE.DirectionalLight(0xffedcf,2.8);daylight.position.set(-8,12,6);exteriorLights.add(daylight);
 const skyAmbient=new THREE.AmbientLight(0xf6f3e9,1.25);exteriorLights.add(skyAmbient);
-const lightSets=[[studio,[[main,58],[rim,78],[fill,1.05],[studioShadowLight,.65]]],[roomLights,[[sun,4.4],[coolAmbient,.45]]],[exteriorLights,[[daylight,2.8],[skyAmbient,1.25]]]];
+const lightSets=[[studio,[[main,58],[rim,78],[fill,1.05],[studioShadowLight,.65]]],[roomLights,[[sun,4.4],[coolAmbient,.9]]],[exteriorLights,[[daylight,2.8],[skyAmbient,1.25]]]];
 for(const m of roomMaterials)revealEffect(m,'room',roomReveal);
 room.traverse(mesh=>{if(mesh.isMesh&&mesh.castShadow){const depth=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking});revealEffect(depth,'room',roomReveal,false,true);mesh.customDepthMaterial=depth;}});
 const roomParticles=triangleParticles(scene,mobile?90:220,0xd6bc8c);
+// Expanding radius, constant world-space line thickness; no extra light or bloom pass.
+const groundRingRadius={value:0},groundRingOpacity={value:0};
+const groundRingMaterial=new THREE.ShaderMaterial({transparent:true,depthWrite:false,toneMapped:false,uniforms:{uRadius:groundRingRadius,uOpacity:groundRingOpacity},vertexShader:`varying vec2 vGround;void main(){vGround=position.xy;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec2 vGround;uniform float uRadius,uOpacity;void main(){float d=abs(length(vGround)-uRadius);float line=1.-smoothstep(.025,.045,d);float halo=exp(-d*20.)*.25;float a=max(line,halo)*uOpacity;if(a<.004)discard;gl_FragColor=vec4(vec3(1.),a);}`});
+const groundRing=new THREE.Mesh(new THREE.PlaneGeometry(20,20),groundRingMaterial);groundRing.rotation.x=-Math.PI/2;groundRing.position.y=.045;groundRing.renderOrder=2;scene.add(groundRing);
 function lightWeight(index,weight){const [group,lights]=lightSets[index];group.visible=weight>.001;for(const [light,base]of lights){light.intensity=weight>.001?base*weight:0;light.visible=weight>.001;}}
 function fadeGeometry(group,materials,weight){group.visible=weight>.001;for(const m of materials){m.opacity=weight;m.transparent=weight<.999;m.depthWrite=weight>.98;}}
 const keys=[
  [0,[0,1.65,2.85],[0,.7,0]],
  [.58,[0,1.65,2.85],[0,.7,0]],
- [.70,[0,1.65,2.85],[0,1.65,0]],
  [.78,[0,1.65,6],[0,1.65,0]],
  [1,[0,1.65,22],[0,1.65,0]]
 ];
@@ -139,14 +145,16 @@ updateScene=p=>{
  chairRoot.position.set(0,0,0);chairRoot.rotation.set(0,-.55,0);
  studio.position.copy(chairRoot.position);
  studioFloor.position.y=.004;studioFloor.visible=p<.43;studioFloorMaterial.opacity=.42*(1-smooth(.35,.43,p));
- const reveal=smooth(.10,.31,p);chairReveal.value=reveal;chairMat.opacity=1;chairMat.transparent=true;solid.visible=reveal>.001;chairMat.depthWrite=true;wireMat.opacity=1;wire.visible=reveal<.999;
+ const reveal=smooth(.10,.31,p);chairReveal.value=reveal;chairMat.opacity=1;chairMat.transparent=false;solid.visible=reveal>.001;chairMat.depthWrite=true;wireMat.opacity=1;wireMat.transparent=false;wireMat.depthWrite=true;wire.visible=reveal<.999;
  chairParticles.update(reveal,'chair');roomParticles.update(roomWeight,'room');roomReveal.value=roomWeight;
  room.visible=roomWeight>.001;for(const m of roomMaterials){m.opacity=1;m.transparent=roomWeight<.999;m.depthWrite=true;}fadeGeometry(outside,outsideMaterials,exteriorWeight);
  contactMaterial.opacity=roomWeight;contact.position.set(0,.035,0);
- lightWeight(0,1-smooth(.35,.56,p));lightWeight(1,smooth(.35,.56,p)*(1-smooth(.77,.9,p)));lightWeight(2,smooth(.77,.9,p));
- const darkRoom=smooth(.4,.58,p)*(1-smooth(.73,.88,p));document.body.classList.toggle('in-room',darkRoom>.6);
+ lightWeight(0,1-smooth(.30,.44,p));lightWeight(1,smooth(.30,.44,p)*(1-smooth(.77,.9,p)));lightWeight(2,smooth(.77,.9,p));
+ const sphereRadius=Math.max(0,-.8+roomWeight*9.8);groundRingRadius.value=Math.sqrt(Math.max(0,sphereRadius*sphereRadius-.55*.55));groundRingOpacity.value=smooth(.34,.37,p)*(1-smooth(.59,.63,p));groundRing.visible=groundRingOpacity.value>.001&&groundRingRadius.value>.02;
+ const darkRoom=smooth(.33,.46,p)*(1-smooth(.73,.88,p));document.body.classList.toggle('in-room',darkRoom>.6);
  if((roomLights.visible||studio.visible)&&Math.abs(p-lastShadow)>.0001){renderer.shadowMap.needsUpdate=true;lastShadow=p;}
  cameraAt(p);
+ skyFade.value=smooth(.74,.96,p);skyDome.visible=skyFade.value>.001;skyDome.position.copy(camera.position);
  $('identity').style.opacity=1-smooth(.06,.18,p);
  const chapter=p<.34?0:p<.72?1:2;
  const headline=p<.16?'From concept.':p<.34?'Into reality.':p<.72?'Objects become spaces.':'Spaces tell stories.';
