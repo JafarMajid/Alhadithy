@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import Sunset from '../components/Sunset.astro';
 const year = new Date().getFullYear();
 ---
 <!doctype html>
@@ -17,8 +18,7 @@ const year = new Date().getFullYear();
   <header class="site-header"><nav aria-label="Main navigation"><a class="wordmark" href="#top">JAFAR ALHADITHY</a></nav></header>
   <main id="main">
     <section class="hero panel" aria-labelledby="intro-title">
-      <!-- Empty by design. Add your background image or video here later. -->
-      <div class="hero-background" aria-hidden="true"></div>
+      <Sunset />
       <div class="hero-content">
         <h1 id="intro-title">A closer look.<br />A different <em>perspective.</em></h1>
         <p class="hero-description">3D design and animation by Jafar Alhadithy.</p>

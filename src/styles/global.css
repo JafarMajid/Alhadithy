@@ -35,8 +35,8 @@ em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; }
   padding-block: 150px 140px;
   isolation: isolate;
 }
-/* Reserved for Jafar's background media. No generated decoration. */
-.hero-background { position: absolute; inset: 0; z-index: -1; background: #242424; }
+.hero::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(90deg, #24242488, #24242415 65%, transparent),linear-gradient(0deg,#242424 0%,transparent 18%); }
+.hero-description { color:#d7d7d7 !important; }
 .hero-content { width: 100%; max-width: 1500px; }
 h1 { font-weight: 450; font-size: clamp(54px, 7.5vw, 120px); line-height: 1.06; letter-spacing: -.055em; }
 h1 em { letter-spacing: -.06em; }
@@ -46,7 +46,7 @@ h1 em { letter-spacing: -.06em; }
 .text-link span { font-size: 20px; transition: transform .2s; }
 .text-link:hover span { transform: translate(2px, 2px); }
 
-.about { padding-block: clamp(70px, 8vw, 125px); background: #202020; }
+.about { padding-block: clamp(70px, 8vw, 125px); background: #242424; }
 .about-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: clamp(40px, 8vw, 145px); align-items: center; }
 .about h2 { font-size: clamp(40px, 5vw, 72px); line-height: 1.1; font-weight: 450; letter-spacing: -.04em; }
 .bio { margin: 30px 0; max-width: 470px; font-size: 16px; line-height: 1.85; color: var(--muted); }
@@ -93,6 +93,7 @@ h1 em { letter-spacing: -.06em; }
   :root { --page-padding: max(88px, calc((100vw - 1640px) / 2)); }
 }
 @media (max-width: 760px) {
+  .video-frame { aspect-ratio: 9 / 16; }
   .site-header { height: 76px; }
   .wordmark { font-size: 12px; letter-spacing: .16em; }
   .hero { min-height: max(620px, 100svh); padding-block: 130px 145px; }
