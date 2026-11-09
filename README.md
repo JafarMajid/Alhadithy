@@ -18,4 +18,4 @@ Build with `npm run build`. Preview the production output with `npm run preview`
 
 ## Publishing
 
-Nothing is deployed automatically. Build output is in `dist/`, including CNAME. GitHub Pages will need an Astro build-and-deploy workflow or a publishing branch containing the output; the source root is no longer a buildless site. Review locally before publishing.
+Pushes to `main` automatically build and publish the site at https://alhadithy.com through `.github/workflows/deploy.yml`. The workflow builds Astro, uploads `dist/`, and deploys it to GitHub Pages. The custom domain is retained through `public/CNAME` and the repository's Pages settings. Review locally before pushing.
