@@ -1,23 +1,21 @@
-# Jafar Alhadithy — scrolling prototype
+# Jafar Alhadithy
 
-Three.js portfolio blockout: exported white matte wireframe → diagonal noisy solid-material reveal with triangle particles → stationary chair surrounded by a spherical room reveal → straight, front-facing exit through the window. Background: #eeece5. Original FBX and GLB exports are untouched.
+A static Astro portfolio with a charcoal introduction, about section, selected work, and independently colored projects.
 
-Serve this folder over HTTP; ES modules and GLB loading will not work reliably from file://. For GitHub Pages, upload the folder contents (index.html, app.js, assets and vendor) to the publishing root.
+## Local development
 
-## Lighting and performance
-- Studio: main and rim point lights, warm ambient fill, and a directional shadow light with a shadow-only receiver matching the flat background.
-- Interior: warm side directional sunlight through the window, one shadow map, blue ambient at 0.9 intensity. No interior point light. Lighting begins changing at 30% scroll and finishes at 44%.
-- Exterior: directional sunlight and ambient fill.
-- Light intensity fades by scroll position; zero-weight lights and groups become invisible and are excluded from rendering.
-- Original chair geometry provides an invisible full silhouette shadow caster (color and depth writes disabled). The extra solid mesh embedded in the wireframe export is removed from the web asset. Only the actual exported wire geometry is visible at the start, using opaque white matte material. Complementary noisy cutouts reveal the finished chair with an emissive leading edge, without translucent white surfaces.
-- Room shader reveals world-space spherical distance from the chair, perturbs the edge with noise, and displaces vertices at the boundary. Its depth shader uses the same reveal so unrevealed walls do not cast phantom shadows.
-- Triangle effects use two instanced draw calls (65/90 particles on mobile, 150/220 on desktop) and switch off outside transitions.
-- A white emissive ground ring tracks the expanding reveal radius with constant world-space line thickness. No bloom pass or additional lights.
-- Camera pitch and backward travel happen together; the exterior settles front-on against a procedural blue sky with a pale horizon.
-- No point-light shadow maps, no postprocessing, no screen-space AO. One 64×64 procedural interior contact-shadow texture. Directional shadow maps update only during scroll movement or loading.
-- Rendering stops when scroll smoothing settles and while the tab is hidden.
-- Mobile: 264 KB chair, pixel ratio capped at 1.25, 512px shadow map, no multisample antialiasing. Desktop: 732 KB chair, pixel ratio capped at 1.75, 1024px shadow map.
-- Three.js 0.180.0 is served locally, with its MIT license included. No CDN, external fonts, video, analytics or framework.
-- Scene buttons support keyboard navigation; reduced-motion preference removes scroll interpolation.
+Run `npm install`, then `npm run dev`. A project-local Node 24 runtime is included for Astro; your system Node installation is unchanged.
+Build with `npm run build`. Preview the production output with `npm run preview`.
 
-This is a lighting and movement prototype. Architecture and furniture intentionally use cubes. Physical mobile-device performance still needs testing.
+## Editing
+
+- `src/pages/index.astro`: copy, project markup, images, and Vimeo embed.
+- `src/styles/global.css`: layout and responsive styles.
+- `public/`: supplied WebP images and custom-domain CNAME.
+- `.hero-background` is intentionally empty for future background media.
+- Navy is scoped to `.project-patek`. Future projects can define their own colors.
+- Vimeo autoplay and looping are disabled.
+
+## Publishing
+
+Nothing is deployed automatically. Build output is in `dist/`, including CNAME. GitHub Pages will need an Astro build-and-deploy workflow or a publishing branch containing the output; the source root is no longer a buildless site. Review locally before publishing.

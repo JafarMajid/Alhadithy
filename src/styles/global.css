@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;600&display=swap');
+
+:root {
+  font-family: 'DM Sans', Arial, sans-serif;
+  font-synthesis: none;
+  color: #f3f1ec;
+  background: #242424;
+  --page-padding: clamp(24px, 5vw, 88px);
+  --muted: #bab9b4;
+  --rule: #ffffff26;
+  --gallery-gap: clamp(16px, 2vw, 32px);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 40px; }
+body { margin: 0; color: #f3f1ec; }
+a { color: inherit; text-decoration: none; }
+a:focus-visible { outline: 2px solid currentColor; outline-offset: 7px; }
+::selection { background: #eeeae0; color: #242424; }
+img { display: block; width: 100%; height: auto; }
+figure, p, h1, h2, h3 { margin: 0; }
+em { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; }
+.skip-link { position: fixed; top: 12px; left: 12px; transform: translateY(-180%); z-index: 20; padding: 12px; background: #fff; color: #111; }
+.skip-link:focus { transform: none; }
+
+.site-header { height: 92px; position: absolute; inset: 0 0 auto; z-index: 5; display: grid; place-items: center; }
+.wordmark { font-size: 14px; font-weight: 600; letter-spacing: .19em; display: inline-block; padding: 12px; }
+.panel { padding-inline: var(--page-padding); }
+.hero {
+  min-height: max(660px, 100svh);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: 150px 140px;
+  isolation: isolate;
+}
+/* Reserved for Jafar's background media. No generated decoration. */
+.hero-background { position: absolute; inset: 0; z-index: -1; background: #242424; }
+.hero-content { width: 100%; max-width: 1500px; }
+h1 { font-weight: 450; font-size: clamp(54px, 7.5vw, 120px); line-height: 1.06; letter-spacing: -.055em; }
+h1 em { letter-spacing: -.06em; }
+.hero-description { font-size: clamp(15px, 1.3vw, 19px); line-height: 1.7; color: var(--muted); margin-top: 34px; }
+.hero-bottom { position: absolute; bottom: 32px; left: var(--page-padding); right: var(--page-padding); display: flex; justify-content: flex-end; border-top: 1px solid var(--rule); padding-top: 18px; }
+.text-link { display: inline-flex; align-items: center; gap: 30px; font-size: 13px; min-height: 44px; padding-block: 8px; border-bottom: 1px solid #ffffff55; }
+.text-link span { font-size: 20px; transition: transform .2s; }
+.text-link:hover span { transform: translate(2px, 2px); }
+
+.about { padding-block: clamp(70px, 8vw, 125px); background: #202020; }
+.about-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: clamp(40px, 8vw, 145px); align-items: center; }
+.about h2 { font-size: clamp(40px, 5vw, 72px); line-height: 1.1; font-weight: 450; letter-spacing: -.04em; }
+.bio { margin: 30px 0; max-width: 470px; font-size: 16px; line-height: 1.85; color: var(--muted); }
+.bio p + p { margin-top: 20px; }
+.portrait { width: 100%; max-width: 480px; justify-self: end; }
+.portrait img { aspect-ratio: 1; object-fit: contain; }
+.work-heading { padding: clamp(60px, 7vw, 100px) var(--page-padding) clamp(50px, 5vw, 75px); }
+.work-heading h2 { font-size: clamp(70px, 11vw, 160px); font-weight: 450; letter-spacing: -.065em; line-height: 1; }
+
+/* Each project supplies its own palette; navy belongs only to Patek. */
+.project { padding: clamp(60px, 7vw, 100px) var(--page-padding) 65px; background: var(--project-background); color: var(--project-foreground); }
+.project-patek { --project-background: #0c1923; --project-foreground: #fff; --muted: #afbbc4; }
+.project-heading { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gallery-gap); align-items: end; margin-bottom: 56px; }
+.project-category { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 20px; }
+.project-heading h2 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: clamp(38px, 5.3vw, 84px); letter-spacing: -.045em; line-height: 1.1; }
+.project-description { max-width: 370px; padding-left: clamp(20px, 4vw, 64px); }
+.project-description h3 { font-size: 20px; font-weight: 450; letter-spacing: -.02em; margin-bottom: 12px; }
+.project-description p { font-size: 14px; line-height: 1.8; color: var(--muted); }
+/* A shared two-column grid keeps all three square images exactly the same
+   size. The watch leads; the two detail shots share a row directly below. */
+.project-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gallery-gap); align-items: stretch; }
+.project-gallery figure { min-width: 0; }
+.project-gallery img { width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; }
+.project-note { align-self: center; padding: 24px clamp(20px, 4vw, 64px); }
+.project-note > p { font-size: clamp(32px, 4.2vw, 66px); font-weight: 400; letter-spacing: -.04em; line-height: 1.13; }
+.project-note .text-link { margin-top: 30px; }
+.film { margin-top: clamp(60px, 7vw, 100px); }
+.film-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; margin-bottom: 26px; }
+.film-heading h3 { font-size: clamp(30px, 4vw, 54px); letter-spacing: -.04em; font-weight: 400; }
+.film-heading > span { font-size: 12px; color: var(--muted); }
+.video-frame { position: relative; aspect-ratio: 16 / 9; background: #071019; }
+.video-frame iframe { display: block; width: 100%; height: 100%; position: absolute; inset: 0; border: 0; }
+.film-external { margin-top: 18px; font-size: 12px; }
+
+.contact { padding: clamp(65px, 8vw, 115px) var(--page-padding) 28px; background: #242424; }
+.contact-title { font-size: clamp(48px, 7vw, 100px); letter-spacing: -.055em; font-weight: 450; line-height: 1.05; }
+.contact-description { margin-top: 34px; margin-bottom: 12px; font-size: 14px; color: var(--muted); line-height: 1.6; }
+.email { font-size: clamp(22px, 3vw, 46px); letter-spacing: -.035em; display: inline-flex; align-items: center; gap: clamp(15px, 4vw, 65px); padding-bottom: 12px; border-bottom: 1px solid #ffffff70; }
+.email:hover { color: #c5c5c0; }
+.footer-bottom { margin-top: 90px; padding-top: 20px; border-top: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: center; gap: 24px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.footer-bottom a { padding-block: 12px; }
+
+@media (min-width: 1800px) {
+  :root { --page-padding: max(88px, calc((100vw - 1640px) / 2)); }
+}
+@media (max-width: 760px) {
+  .site-header { height: 76px; }
+  .wordmark { font-size: 12px; letter-spacing: .16em; }
+  .hero { min-height: max(620px, 100svh); padding-block: 130px 145px; }
+  h1 { font-size: clamp(43px, 8.8vw, 67px); }
+  .hero-description { font-size: 15px; margin-top: 28px; max-width: 280px; }
+  .hero-bottom { bottom: 24px; }
+  .about-grid { grid-template-columns: 1fr; gap: 40px; }
+  .bio { font-size: 15px; margin-block: 26px; }
+  .portrait { justify-self: start; max-width: 420px; }
+  .work-heading h2 { font-size: clamp(70px, 15vw, 112px); }
+  .project { padding-bottom: 45px; }
+  .project-heading { grid-template-columns: 1fr; gap: 25px; margin-bottom: 35px; }
+  .project-heading h2 { font-size: clamp(39px, 8vw, 58px); }
+  .project-category { font-size: 10px; margin-bottom: 16px; }
+  .project-description { padding-left: 0; max-width: 330px; }
+  .project-description h3 { font-size: 19px; margin-bottom: 8px; }
+  .project-gallery { grid-template-columns: 1fr; gap: 20px; }
+  .project-note { padding: 12px 0 25px; }
+  .project-note > p { font-size: clamp(36px, 7vw, 49px); }
+  .project-note .text-link { margin-top: 20px; }
+  .film-heading > span { font-size: 11px; }
+  .contact-title { font-size: clamp(48px, 10vw, 72px); }
+  .email { font-size: clamp(21px, 5.3vw, 35px); }
+  .footer-bottom { margin-top: 65px; font-size: 10px; gap: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition: none !important; }
+}
