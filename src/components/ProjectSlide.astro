@@ -1,0 +1,52 @@
+---
+interface Props {
+  className?: string;
+  title: string;
+  titleId: string;
+  category: string;
+  detailTitle: string;
+  description: string;
+  filmId?: string;
+  filmTitle?: string;
+  filmTitleId?: string;
+}
+
+const {
+  className,
+  title,
+  titleId,
+  category,
+  detailTitle,
+  description,
+  filmId,
+  filmTitle = 'The film',
+  filmTitleId,
+} = Astro.props;
+const hasFilm = Boolean(filmId && Astro.slots.has('film'));
+const resolvedFilmTitleId = filmTitleId ?? `${filmId}-title`;
+---
+
+<article class:list={['project', className]} aria-labelledby={titleId}>
+  <header class="project-heading" data-motion="reveal">
+    <div>
+      <p class="project-category">{category}</p>
+      <h2 id={titleId}>{title}</h2>
+    </div>
+    <div class="project-description">
+      <h3>{detailTitle}</h3>
+      <p>{description}</p>
+    </div>
+  </header>
+  <div class="project-gallery" data-motion-group>
+    <slot name="gallery" />
+  </div>
+  {hasFilm && (
+    <section class="film" id={filmId} aria-labelledby={resolvedFilmTitleId}>
+      <div class="film-heading">
+        <h3 id={resolvedFilmTitleId} data-motion="reveal">{filmTitle}</h3>
+        <span>{detailTitle}</span>
+      </div>
+      <slot name="film" />
+    </section>
+  )}
+</article>

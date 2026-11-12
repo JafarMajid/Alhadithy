@@ -1,7 +1,15 @@
 ---
 import '../styles/global.css';
 import Sunset from '../components/Sunset.astro';
+import ProjectSlide from '../components/ProjectSlide.astro';
+import Motion from '../components/Motion.astro';
 const year = new Date().getFullYear();
+const heroFirstLine = 'A closer look.';
+const heroSecondLine = 'A different ';
+const heroEmphasis = 'perspective.';
+const letterDelay = 42;
+const secondLineDelay = heroFirstLine.length * letterDelay + 200;
+const subtitleDelay = secondLineDelay + (heroSecondLine.length + heroEmphasis.length - 1) * letterDelay + 1;
 ---
 <!doctype html>
 <html lang="en">
@@ -16,18 +24,31 @@ const year = new Date().getFullYear();
 <body id="top">
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header"><nav aria-label="Main navigation"><a class="wordmark" href="#top">JAFAR ALHADITHY</a></nav></header>
+  <script>
+    const header = document.querySelector('.site-header');
+    const hero = document.querySelector('.hero');
+
+    if (header && hero) {
+      const observer = new IntersectionObserver(([entry]) => {
+        header.classList.toggle('past-hero', !entry.isIntersecting && entry.boundingClientRect.bottom <= 0);
+      });
+      observer.observe(hero);
+    }
+  </script>
   <main id="main">
     <section class="hero panel" aria-labelledby="intro-title">
       <Sunset />
       <div class="hero-content">
-        <h1 id="intro-title">A closer look.<br />A different <em>perspective.</em></h1>
-        <p class="hero-description">3D design and animation by Jafar Alhadithy.</p>
+        <h1 id="intro-title" aria-label={`${heroFirstLine} ${heroSecondLine}${heroEmphasis}`}>
+          <span aria-hidden="true">{Array.from(heroFirstLine, (letter, index) => <span class="hero-letter" style={`--letter-delay: ${index * letterDelay}ms`}>{letter}</span>)}<br />{Array.from(heroSecondLine, (letter, index) => <span class="hero-letter" style={`--letter-delay: ${secondLineDelay + index * letterDelay}ms`}>{letter}</span>)}<em>{Array.from(heroEmphasis, (letter, index) => <span class="hero-letter" style={`--letter-delay: ${secondLineDelay + (heroSecondLine.length + index) * letterDelay}ms`}>{letter}</span>)}</em></span>
+        </h1>
+        <p class="hero-description" style={`--hero-subtitle-delay: ${subtitleDelay}ms`}>3D design and animation by Jafar Alhadithy.</p>
       </div>
       <div class="hero-bottom"><a class="text-link" href="#work">View my work <span aria-hidden="true">↓</span></a></div>
     </section>
     <section class="about panel" id="about" aria-labelledby="about-title">
       <div class="about-grid">
-        <div class="about-copy">
+        <div class="about-copy" data-motion="reveal">
           <h2 id="about-title">I’m Jafar.</h2>
           <div class="bio">
             <p>I’m a civil engineer and 3D designer.</p>
@@ -35,25 +56,25 @@ const year = new Date().getFullYear();
           </div>
           <a class="text-link" href="mailto:jafar@alhadithy.com">Get in touch <span aria-hidden="true">↗</span></a>
         </div>
-        <figure class="portrait"><img src="/personalphoto.webp" alt="Jafar Alhadithy" width="1080" height="1080" loading="lazy" decoding="async" /></figure>
+        <figure class="portrait" data-motion="media"><img src="/personalphoto.webp" alt="Jafar Alhadithy" width="1080" height="1080" loading="lazy" decoding="async" /></figure>
       </div>
     </section>
     <section class="work-heading" id="work" aria-labelledby="work-title">
-      <h2 id="work-title">My work</h2>
+      <h2 id="work-title" data-motion="reveal">My work</h2>
     </section>
     <!-- Project palettes are independent. Navy is only for Patek. -->
-    <article class="project project-patek" aria-labelledby="patek-title">
-      <header class="project-heading">
-        <div>
-          <p class="project-category">3D animation</p>
-          <h2 id="patek-title">Patek Philippe</h2>
-        </div>
-        <div class="project-description">
-          <h3>World Time</h3>
-          <p>Multiple time zones on one dial, with local time you can adjust as you travel.</p>
-        </div>
-      </header>
-      <div class="project-gallery">
+    <ProjectSlide
+      className="project-patek"
+      title="Patek Philippe"
+      titleId="patek-title"
+      category="3D animation"
+      detailTitle="World Time Project"
+      description="My take on the Patek Philippe World Time, brought to life in 3D."
+      filmId="patek-film"
+      filmTitle="The film"
+      filmTitleId="film-title"
+    >
+      <Fragment slot="gallery">
         <figure class="watch-hero"><img src="/patek3.webp" alt="Patek Philippe World Time watch with a blue dial and woven strap" width="1920" height="1920" loading="lazy" decoding="async" /></figure>
         <div class="project-note">
           <p>Every detail<br />deserves a<br /><em>closer look.</em></p>
@@ -61,9 +82,8 @@ const year = new Date().getFullYear();
         </div>
         <figure><img src="/patek1.webp" alt="Polished globe inside concentric brushed metal rings" width="1920" height="1920" loading="lazy" decoding="async" /></figure>
         <figure><img src="/patek2.webp" alt="Macro view of the blue woven watch strap and white stitching" width="1920" height="1920" loading="lazy" decoding="async" /></figure>
-      </div>
-      <section class="film" id="patek-film" aria-labelledby="film-title">
-        <div class="film-heading"><h3 id="film-title">The film</h3><span>World Time</span></div>
+      </Fragment>
+      <Fragment slot="film">
         <div class="video-frame">
           <iframe
             title="Patek Philippe World Time — 3D film by Jafar Alhadithy"
@@ -77,14 +97,15 @@ const year = new Date().getFullYear();
           ></iframe>
         </div>
         <a class="film-external text-link" href="https://vimeo.com/1182310842/506cfc9e92" target="_blank" rel="noopener noreferrer">Open on Vimeo <span aria-hidden="true">↗</span></a>
-      </section>
-    </article>
+      </Fragment>
+    </ProjectSlide>
   </main>
   <footer class="contact" id="contact">
-    <h2 class="contact-title">Get in touch.</h2>
+    <h2 class="contact-title" data-motion="reveal">Get in touch.</h2>
     <p class="contact-description">For project enquiries:</p>
     <a class="email" href="mailto:jafar@alhadithy.com">jafar@alhadithy.com <span aria-hidden="true">↗</span></a>
     <div class="footer-bottom"><span>© {year} Jafar Alhadithy</span><a href="#top">Back to top ↑</a></div>
   </footer>
+  <Motion />
 </body>
 </html>

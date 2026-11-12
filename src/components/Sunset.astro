@@ -4,6 +4,7 @@
 <style>
   .sunset { position:absolute; inset:0; z-index:-2; overflow:hidden; background:#242424; }
   canvas { display:block; width:100%; height:100%; }
+  canvas[hidden] { display:none; }
   .sunset-motion { position:absolute; right:var(--page-padding); bottom:103px; border:1px solid #ffffff40; border-radius:30px; padding:10px 15px; color:#eee; background:#18181855; font:inherit; font-size:11px; cursor:pointer; backdrop-filter:blur(8px); }
   .sunset-motion span { margin-left:12px; }
   .sunset-motion:focus-visible { outline:2px solid white; outline-offset:4px; }
@@ -13,20 +14,37 @@
   const canvas = document.querySelector<HTMLCanvasElement>('.sunset canvas');
   const button = document.querySelector<HTMLButtonElement>('.sunset-motion');
   if (canvas && button) {
-    const gl = canvas.getContext('webgl', { alpha:true, premultipliedAlpha:false, antialias:false, depth:false, powerPreference:'low-power' });
-    if (!gl) button.hidden = true;
+    const gl = canvas.getContext('webgl', { alpha:false, antialias:false, depth:false, powerPreference:'low-power' });
+    if (!gl) { button.hidden = true; canvas.hidden = true; }
     else {
       const vertex = `attribute vec2 position; void main(){gl_Position=vec4(position,0.,1.);}`;
       const fragment = `
         precision highp float;
         uniform vec2 resolution;
         uniform float time;
+        uniform float grainSeed;
+        uniform float grainSize;
         uniform vec2 pointer;
         uniform float scroll;
         mat3 rotateX(float a){float c=cos(a),s=sin(a);return mat3(1.,0.,0.,0.,c,s,0.,-s,c);}
         mat3 rotateY(float a){float c=cos(a),s=sin(a);return mat3(c,0.,-s,0.,1.,0.,s,0.,c);}
         mat3 rotateZ(float a){float c=cos(a),s=sin(a);return mat3(c,s,0.,-s,c,0.,0.,0.,1.);}
-        float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+        float grainSample(vec2 cell){
+          vec3 p=fract(vec3(cell,grainSeed)*vec3(.1031,.11369,.13787));
+          p+=dot(p,p.yzx+19.19);
+          return fract((p.x+p.y)*p.z);
+        }
+        float filteredGrain(vec2 position){
+          vec2 cell=floor(position);
+          vec2 blend=smoothstep(vec2(0.),vec2(1.),fract(position));
+          float lower=mix(grainSample(cell),grainSample(cell+vec2(1.,0.)),blend.x);
+          float upper=mix(grainSample(cell+vec2(0.,1.)),grainSample(cell+vec2(1.,1.)),blend.x);
+          return mix(lower,upper,blend.y)-.5;
+        }
+        float stripEndFade(float endDistance,float outerStrip){
+          float fade=smoothstep(0.,.46+outerStrip*.146,endDistance);
+          return pow(fade,mix(3.,2.2,outerStrip));
+        }
         void main(){
           vec2 uv=(gl_FragCoord.xy-.5*resolution)/resolution.y;
           // Shrink around the right-side composition without changing orientation.
@@ -40,40 +58,83 @@
           vec2 axis=normalize(vec2(-.66,.75));
           vec2 across=vec2(axis.y,-axis.x);
           float value=0.;
+          float waveTint=0.;
+          const float wavePeriod=8.4;
+          float waveIndex=mod(floor(time/wavePeriod),4.);
+          vec3 waveColor=vec3(102.,94.,255.);
+          if(waveIndex==1.) waveColor=vec3(237.,193.,24.);
+          else if(waveIndex==2.) waveColor=vec3(255.,31.,31.);
+          else if(waveIndex==3.) waveColor=vec3(255.,5.,223.);
           float nearest=100.;
-          float grain=hash(gl_FragCoord.xy);
-          for(int i=0;i<10;i++){
-            float fi=float(i)-3.;
-            float rank=9.-float(i);
+          float grain=filteredGrain(gl_FragCoord.xy/grainSize);
+          float originAcross=dot(origin.xy,across);
+          float rayAcross=dot(ray.xy,across);
+          for(int i=0;i<11;i++){
+            float stripOffset=float(i)-4.5;
+            float stripProgress=float(i)/10.;
+            float rank=9.*(1.-stripProgress);
+            float outerStrip=max(0.,float(i)-9.);
             // Intersect a separate raised plane for each strip.
             float height=.48-rank*.09;
             float distance=(height-origin.z)/ray.z;
             vec2 surface=(origin+ray*distance).xy;
             float u=dot(surface,across),v=dot(surface,axis);
-            float center=-.24+fi*.168+sin(time*.15)*.012;
-            float halfWidth=.079;
-            float x=(u-center)/halfWidth;
+            float widthStep=.007;
+            float halfWidth=.079+stripOffset*widthStep;
+            // Keep the gaps even and anchor the original ten strips.
+            float rightEdgeShift=(4.5*4.5+4.5)*widthStep;
+            float baseCenter=.012+stripOffset*(.168+stripOffset*widthStep)-rightEdgeShift+sin(time*.15)*.012;
             // Strips descend in depth and brightness from right to left.
-            float top=.99-rank*.065-center*across.y/axis.y;
+            float top=.99-rank*.065-baseCenter*across.y/axis.y+outerStrip*.20;
             float bottom=-.91+rank*.025;
+            // Pass a short crest and trough up each strip, then let it settle.
+            float stripTime=mod(time,wavePeriod)-.6-float(i)*.32;
+            float waveHalfWidth=.48;
+            float waveCenter=-waveHalfWidth+stripTime*(1.64/2.7);
+            float wavePosition=((v-bottom)/(top-bottom)-waveCenter)/waveHalfWidth;
+            float envelope=1.-smoothstep(0.,1.,abs(wavePosition));
+            float wave=.0175*sin(clamp(wavePosition,-1.,1.)*3.14159)*envelope;
+            float center=baseCenter+wave;
+            float x=(u-center)/halfWidth;
+            float brightness=pow(stripProgress,1.25);
+            float sideShade=.009;
             float endDistance=min(top-v,v-bottom);
             if(abs(x)<1. && endDistance>0. && distance<nearest){
               float edgeDistance=(x+1.)*.5;
               float inwardGlow=.64*exp(-edgeDistance*16.);
-              float oppositeGlow=.16*exp(-(1.-edgeDistance)*22.);
-              float face=.14+.045*(1.-edgeDistance);
-              // A wide, grain-broken fade dissolves each end into the page.
-              float fade=smoothstep(.0,.46,endDistance+(grain-.5)*.045);
-              fade=pow(fade,2.);
-              float border=smoothstep(0.,.012,1.-abs(x));
-              float band=(face+inwardGlow+oppositeGlow)*fade*border;
-              band+=(grain-.5)*.075*fade;
-              band*=pow(float(i)/9.,1.25);
-              if(fade>.005){value=band;nearest=distance;}
+              float rightFade=1.-smoothstep(.22,1.,edgeDistance);
+              float face=mix(sideShade,.185,rightFade);
+              float fade=stripEndFade(endDistance,outerStrip);
+              float leftBorder=smoothstep(0.,.012,x+1.);
+              float band=(face+(inwardGlow+grain*.07)*rightFade)*fade*leftBorder*brightness;
+              if(fade>.005){
+                value=band;
+                waveTint=envelope*fade*leftBorder*(1.-smoothstep(.7,1.,edgeDistance));
+                nearest=distance;
+              }
+            }
+            // The right face slopes down into the gap between strips.
+            float rightEdge=center+halfWidth;
+            float sideSlope=2.4;
+            float sideDenominator=ray.z+sideSlope*rayAcross;
+            if(abs(sideDenominator)>.0001){
+              float sideDistance=(height-origin.z+sideSlope*(rightEdge-originAcross))/sideDenominator;
+              float sideProgress=(originAcross+rayAcross*sideDistance-rightEdge)/.008;
+              if(sideDistance>0. && sideDistance<nearest && sideProgress>=0. && sideProgress<=1.){
+                float sideV=dot(origin.xy+ray.xy*sideDistance,axis);
+                float fade=stripEndFade(min(top-sideV,sideV-bottom),outerStrip);
+                if(fade>.005){
+                  value=sideShade*(1.-smoothstep(0.,1.,sideProgress))*fade*brightness;
+                  waveTint=0.;
+                  nearest=sideDistance;
+                }
+              }
             }
           }
           value*=1.-.18*length(uv);
-          gl_FragColor=vec4(vec3(1.),clamp(value,0.,1.));
+          // Blend with the charcoal background before handing pixels to the browser.
+          vec3 shade=mix(vec3(36./255.),vec3(1.),clamp(value,0.,1.));
+          gl_FragColor=vec4(mix(shade,waveColor/255.,waveTint),1.);
         }`;
       const compile = (type:number, source:string) => {
         const shader = gl.createShader(type)!;
@@ -93,11 +154,37 @@
         gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
         const position=gl.getAttribLocation(program,'position'); gl.enableVertexAttribArray(position); gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);
         const size=gl.getUniformLocation(program,'resolution'), clock=gl.getUniformLocation(program,'time'), mouse=gl.getUniformLocation(program,'pointer'), scrollUniform=gl.getUniformLocation(program,'scroll');
+        const grainSeedUniform=gl.getUniformLocation(program,'grainSeed');
+        const grainSizeUniform=gl.getUniformLocation(program,'grainSize');
         const reduced=matchMedia('(prefers-reduced-motion: reduce)');
         let paused=reduced.matches, visible=true, frame=0, previous=0, elapsed=0, lastDraw=0, px=0, py=0, targetX=0, targetY=0, scroll=0, targetScroll=0;
         const draw=()=> { gl.uniform2f(size,canvas.width,canvas.height); gl.uniform1f(clock,elapsed); gl.uniform2f(mouse,reduced.matches?0:px,reduced.matches?0:py); gl.uniform1f(scrollUniform,reduced.matches?0:scroll); gl.drawArrays(gl.TRIANGLES,0,6); };
-        const resize=()=> { const rect=canvas.getBoundingClientRect(); const scale=Math.min(devicePixelRatio,1.25,1440/Math.max(rect.width,1)); canvas.width=Math.max(1,Math.round(rect.width*scale)); canvas.height=Math.max(1,Math.round(rect.height*scale)); gl.viewport(0,0,canvas.width,canvas.height); draw(); };
-        const tick=(now:number)=> { frame=0; if(paused || !visible || document.hidden) return; const dt=previous?Math.min((now-previous)/1000,.1):.016; elapsed+=dt; previous=now; const ease=1.-Math.exp(-dt*7.); px+=(targetX-px)*ease; py+=(targetY-py)*ease; scroll+=(targetScroll-scroll)*ease; if(now-lastDraw>32){draw();lastDraw=now;} frame=requestAnimationFrame(tick); };
+        const resize=()=> {
+          const rect=canvas.getBoundingClientRect();
+          const scale=Math.min(devicePixelRatio,1.25,1440/Math.max(rect.width,1));
+          canvas.width=Math.max(1,Math.round(rect.width*scale));
+          canvas.height=Math.max(1,Math.round(rect.height*scale));
+          gl.viewport(0,0,canvas.width,canvas.height);
+          gl.uniform1f(grainSizeUniform,Math.max(2,2.3*scale));
+          draw();
+        };
+        const tick=(now:number)=> {
+          frame=0;
+          if(paused || !visible || document.hidden) return;
+          const dt=previous?Math.min((now-previous)/1000,.1):.016;
+          elapsed+=dt;
+          previous=now;
+          const ease=1.-Math.exp(-dt*7.);
+          px+=(targetX-px)*ease;
+          py+=(targetY-py)*ease;
+          scroll+=(targetScroll-scroll)*ease;
+          if(now-lastDraw>32){
+            gl.uniform1f(grainSeedUniform,Math.random()*256);
+            draw();
+            lastDraw=now;
+          }
+          frame=requestAnimationFrame(tick);
+        };
         const sync=()=> { cancelAnimationFrame(frame); previous=0; button.setAttribute('aria-pressed',String(paused)); button.setAttribute('aria-label',paused?'Play abstract background animation':'Pause abstract background animation'); button.innerHTML=paused?'Play motion <span aria-hidden="true">▶</span>':'Pause motion <span aria-hidden="true">Ⅱ</span>'; if(!paused && visible && !document.hidden) frame=requestAnimationFrame(tick); };
         button.addEventListener('click',()=>{paused=!paused;sync();});
         reduced.addEventListener('change',()=>{paused=reduced.matches;sync();});
@@ -106,7 +193,6 @@
         new ResizeObserver(resize).observe(canvas);
         const hero=canvas.closest('section');
         hero?.addEventListener('pointermove',(event)=>{if(reduced.matches || paused)return;const e=event as PointerEvent;if(e.pointerType==='touch')return;const r=canvas.getBoundingClientRect();targetX=(e.clientX-r.left)/r.width-.5;targetY=(e.clientY-r.top)/r.height-.5;});
-        hero?.addEventListener('pointerleave',()=>{targetX=0;targetY=0;});
         const updateScroll=()=>{if(!hero || reduced.matches)return;const rect=hero.getBoundingClientRect();targetScroll=Math.max(0,Math.min(1,-rect.top/rect.height));};
         addEventListener('scroll',updateScroll,{passive:true});
         updateScroll();

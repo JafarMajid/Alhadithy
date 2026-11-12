@@ -1,0 +1,122 @@
+<style is:global>
+  /* Motion is opt-in at runtime, so content stays fully visible without JS. */
+  html.motion-ready [data-motion="reveal"].motion-pending,
+  html.motion-ready [data-motion="media"].motion-pending {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+    transition: none !important;
+  }
+
+  html.motion-ready [data-motion="media"].motion-pending {
+    transform: translate3d(0, 26px, 0) scale(.98);
+  }
+
+  [data-motion="reveal"],
+  [data-motion="media"] {
+    transition: opacity 650ms cubic-bezier(.2,.7,.2,1), transform 750ms cubic-bezier(.2,.7,.2,1);
+    transition-delay: var(--motion-delay, 0ms);
+  }
+
+  [data-motion].motion-pending { transition: none !important; }
+
+  [data-motion="reveal"].motion-visible,
+  [data-motion="media"].motion-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  .text-link {
+    transition: transform 220ms cubic-bezier(.2,.7,.2,1);
+  }
+
+  .text-link:focus-visible { transform: translateY(-2px); }
+  .text-link:active { transform: translateY(0) scale(.985); }
+
+  @media (hover: hover) and (pointer: fine) {
+    .text-link:hover { transform: translateY(-2px); }
+  }
+
+  [data-motion].motion-focus-reveal { transition: none !important; }
+
+  @media (max-width: 760px) {
+    [data-motion] { transition-delay: 0ms !important; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-motion="reveal"],
+    [data-motion="media"],
+    .text-link { transition: none !important; transform: none !important; }
+  }
+</style>
+
+<script>
+  const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const reduceMotion = motionPreference.matches;
+  const supportsMotion = 'IntersectionObserver' in window;
+
+  if (!reduceMotion && supportsMotion) {
+    const initialViewportBottom = window.innerHeight;
+    const candidates = new Set<HTMLElement>();
+
+    document.querySelectorAll<HTMLElement>('[data-motion="reveal"], [data-motion="media"]').forEach((item) => {
+      candidates.add(item);
+    });
+
+    // Gallery figures and the note enroll through their container, keeping markup compact.
+    document.querySelectorAll<HTMLElement>('[data-motion-group]').forEach((group) => {
+      const members = Array.from(group.children).filter((child): child is HTMLElement =>
+        child instanceof HTMLElement && (child.tagName === 'FIGURE' || child.classList.contains('project-note')),
+      );
+      // A short cap prevents long rows from turning into delayed mobile sequences.
+      members.forEach((member, index) => {
+        member.dataset.motion = member.tagName === 'FIGURE' ? 'media' : 'reveal';
+        member.style.setProperty('--motion-delay', `${Math.min(index, 2) * 75}ms`);
+        candidates.add(member);
+      });
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const item = entry.target as HTMLElement;
+        if (entry.isIntersecting || item.contains(document.activeElement)) {
+          item.classList.remove('motion-pending');
+          item.classList.add('motion-visible');
+          observer.unobserve(item);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -5% 0px' });
+
+    document.addEventListener('focusin', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const item = target.closest<HTMLElement>('[data-motion="reveal"], [data-motion="media"]');
+      if (!item) return;
+      item.classList.remove('motion-pending');
+      item.classList.add('motion-focus-reveal', 'motion-visible');
+      observer.unobserve(item);
+    }, true);
+
+    // Establish the enhancement only after all targets are known; visible and focused
+    // content is revealed immediately so deep links never land on hidden content.
+    candidates.forEach((item) => {
+      const bounds = item.getBoundingClientRect();
+      if (bounds.top < initialViewportBottom && bounds.bottom > 0 || item.contains(document.activeElement)) {
+        item.classList.add('motion-visible');
+      } else {
+        item.classList.add('motion-pending');
+        observer.observe(item);
+      }
+    });
+    document.documentElement.classList.add('motion-ready');
+
+    motionPreference.addEventListener('change', (event) => {
+      if (!event.matches) return;
+      candidates.forEach((item) => {
+        item.classList.remove('motion-pending');
+        item.classList.add('motion-visible');
+        observer.unobserve(item);
+      });
+      document.documentElement.classList.remove('motion-ready');
+    });
+  }
+</script>
